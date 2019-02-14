@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging;
 using System;
@@ -27,7 +28,7 @@ namespace AccessLogMiddleware
             {
                 HttpContext = httpContext,
                 ResponseStream = new CountingStream(httpContext.Response.Body),
-                StartDate = DateTimeOffset.Now.ToString("d/MMM/yyyy:H:m:s zzz"),
+                StartDate = DateTime.Now,
                 RemoteHost = httpContext.Connection.RemoteIpAddress.ToString(),
                 RequestLine = $"{httpContext.Request.Method} {rawTarget} {httpContext.Request.Protocol}",
             };
@@ -86,10 +87,19 @@ namespace AccessLogMiddleware
             public string RemoteHost { get; set; }
             public string Rfc931 { get; set; } = "Rfc931"; // ??
             public string AuthUser { get; set; }
-            public string StartDate { get; set; }
+            public DateTime StartDate { get; set; }
             public string RequestLine { get; set; }
             public int StatusCode { get; set; }
             public long Bytes { get; set; }
+        }
+    }
+
+    // Extension method used to add the middleware to the HTTP request pipeline.
+    public static class AccessLogMiddlewareExtensions
+    {
+        public static IApplicationBuilder UseAccessLogging(this IApplicationBuilder builder)
+        {
+            return builder.UseMiddleware<AccessLogMiddleware>();
         }
     }
 }
