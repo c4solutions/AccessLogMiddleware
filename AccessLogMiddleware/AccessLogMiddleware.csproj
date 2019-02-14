@@ -2,6 +2,20 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>AccessLogMiddleware.CommonLog</PackageId>
+    <Authors>Barrett Gay</Authors>
+    <Company>C4 Solutions LLC</Company>
+    <Product />
+    <Description>Access Log generator for .NET Standard that logs HttpContext events in the CommonLog format.  Original idea and code from: Chris Ross @ https://github.com/Tratcher/CommonLog</Description>
+    <RepositoryUrl>https://github.com/c4solutions/accesslogmiddleware</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/c4solutions/accesslogmiddleware</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/c4solutions/accesslogmiddleware/blob/master/LICENSE</PackageLicenseUrl>
+    <Copyright>Copyright (c) 2019 C4 Solutions LLC</Copyright>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
+  </ItemGroup>
 
 </Project>
