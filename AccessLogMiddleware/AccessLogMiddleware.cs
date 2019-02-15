@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using AccessLogMiddleware.Utility;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace AccessLogMiddleware
@@ -10,13 +12,23 @@ namespace AccessLogMiddleware
     internal class AccessLogMiddleware
     {
         private readonly RequestDelegate _next;
+        private readonly LogLevel _logLevel;
+        private readonly int[] _statusCodes;
+        private readonly ILogger<AccessLogMiddleware> _logger;
 
-        public ILogger<AccessLogMiddleware> Logger { get; }
-
-        public AccessLogMiddleware(RequestDelegate next, ILogger<AccessLogMiddleware> logger)
+        public AccessLogMiddleware(RequestDelegate next, ILogger<AccessLogMiddleware> logger, AccessLogOptions options)
         {
             _next = next;
-            Logger = logger;
+            _logger = logger;
+
+            // Options
+            _logLevel = options.LogLevel;
+            if (!string.IsNullOrEmpty(options.StatusCodes))
+            {
+                var range = IntRange.ParseRange(options.StatusCodes);
+                if (range.Length > 0)
+                    _statusCodes = range;
+            }
         }
 
         public async Task Invoke(HttpContext httpContext)
@@ -70,13 +82,17 @@ namespace AccessLogMiddleware
             LogState state = (LogState)arg;
             state.Bytes = state.ResponseStream.BytesWritten;
 
+            // Check that status code matches
+            if (_statusCodes.Length > 0 && Array.IndexOf(_statusCodes, state.StatusCode) == -1)
+                return Task.CompletedTask;
+
             WriteLog(state);
             return Task.CompletedTask;
         }
 
         private void WriteLog(LogState state)
         {
-            Logger.LogInformation($"{state.RemoteHost} {state.Rfc931} {state.AuthUser} [{state.StartDate:dd/MMM/yyyy:HH:mm:ss zzz}] \"{state.RequestLine}\" {state.StatusCode} {state.Bytes}");
+            _logger.Log(_logLevel, $"{state.RemoteHost} {state.Rfc931} {state.AuthUser} [{state.StartDate:dd/MMM/yyyy:HH:mm:ss zzz}] \"{state.RequestLine}\" {state.StatusCode} {state.Bytes}");
         }
 
         private class LogState
@@ -97,9 +113,12 @@ namespace AccessLogMiddleware
     // Extension method used to add the middleware to the HTTP request pipeline.
     public static class AccessLogMiddlewareExtensions
     {
-        public static IApplicationBuilder UseAccessLogging(this IApplicationBuilder builder)
+        public static IApplicationBuilder UseAccessLogging(this IApplicationBuilder builder, Action<AccessLogOptions> configureOptions)
         {
-            return builder.UseMiddleware<AccessLogMiddleware>();
+            var options = new AccessLogOptions();
+            configureOptions(options);
+
+            return builder.UseMiddleware<AccessLogMiddleware>(options);
         }
     }
 }
